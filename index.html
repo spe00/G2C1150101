@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國語互動測驗 - 115學年度第一學期期中評量</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 載入 芫荽注音體 (Bpmf Iansui) 雲端字型確保所有裝置皆能顯示國字與注音 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bpmf+Iansui&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/bpmf-iansui@latest/index.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        /* 嚴格設定芫荽注音體 (Bpmf Iansui / ㄅ注音芫荽)，支援雲端字型與本機字型 */
+        @font-face {
+            font-family: '芫荽注音體';
+            src: local('ㄅ注音芫荽'),
+                 local('注音芫荽'),
+                 local('芫荽注音體'),
+                 local('芫荽注音'),
+                 local('Bpmf Iansui'),
+                 local('BpmfIansui-Regular'),
+                 url('https://cdn.jsdelivr.net/gh/leadra/webfont/BpmfIansui-Regular.woff2') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        
+        /* 全站所有文字強制套用芫荽注音體，並加大字距與行高方便學生閱讀注音 */
+        body, button, input, select, textarea, h1, h2, h3, h4, h5, h6, p, span, div {
+            font-family: '芫荽注音體', 'Bpmf Iansui', 'ㄅ注音芫荽', sans-serif !important;
+            letter-spacing: 0.06em;
+            line-height: 1.8;
+        }
+
+        body {
+            background: linear-gradient(135deg, #fff5f5 0%, #e0f2fe 50%, #f0fdf4 100%);
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        /* 保留 Font Awesome 圖示字型避免圖示變方框 */
+        .fa-solid, .fas {
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 900 !important;
+        }
+        .fa-regular, .far {
+            font-family: "Font Awesome 6 Free" !important;
+            font-weight: 400 !important;
+        }
+
+        .btn-bounce {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .btn-bounce:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-bounce:active {
+            transform: translateY(2px) scale(0.98);
+        }
+
+        /* 題目中關鍵字高亮樣式 */
+        .highlight-neg {
+            color: #dc2626;
+            background-color: #fef2f2;
+            padding: 0.1rem 0.5rem;
+            border-radius: 0.375rem;
+            border: 2px dashed #fca5a5;
+            font-weight: 900;
+            display: inline-block;
+            transform: scale(1.05);
+            margin: 0 0.15rem;
+        }
+
+        .star-shine {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.85; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col min-h-screen">
+
+    <!-- Header Navigation & Progress Bar -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md shadow-md border-b-4 border-pink-300 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-pink-400 text-white flex items-center justify-center font-bold text-xl shadow-inner">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-bold text-pink-600 leading-tight">二上國語期中互動複習</h1>
+                    <p class="text-xs text-slate-500">翰林版 第一課 ~ 第六課（字體：芫荽注音體）</p>
+                </div>
+            </div>
+
+            <!-- Total Score & Mistakes Badge -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5 bg-amber-50 px-3 py-1.5 rounded-full border-2 border-amber-300">
+                    <i class="fa-solid fa-star text-amber-400 star-shine text-lg"></i>
+                    <span class="text-xs font-bold text-amber-700">得分:</span>
+                    <span id="score-display" class="text-xl font-black text-amber-600">0</span>
+                    <span class="text-xs text-amber-500">/ 310 分</span>
+                </div>
+
+                <div id="mistake-badge" class="hidden sm:flex items-center gap-1 bg-rose-50 px-3 py-1.5 rounded-full border-2 border-rose-300 text-rose-600 text-xs font-bold">
+                    <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
+                    <span>錯題區: <span id="mistake-count">0</span> 題</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar Indicator -->
+        <div class="max-w-4xl mx-auto mt-2 flex items-center gap-2">
+            <div class="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 w-0 transition-all duration-300"></div>
+            </div>
+            <span id="progress-text" class="text-xs font-bold text-pink-600 min-w-[50px] text-right">0/31 題</span>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6">
+
+        <!-- Category Selector Tabs -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6" id="category-tabs">
+            <button onclick="switchMode('all')" id="tab-all" class="tab-btn px-2.5 py-2 rounded-2xl font-bold text-sm bg-white text-slate-600 border-2 border-slate-200 hover:border-pink-300 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-list-check text-pink-500"></i> 全部題目
+            </button>
+            <button onclick="switchMode('idiom')" id="tab-idiom" class="tab-btn px-2.5 py-2 rounded-2xl font-bold text-sm bg-white text-slate-600 border-2 border-slate-200 hover:border-pink-300 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-book-bookmark text-pink-500"></i> 填成語
+            </button>
+            <button onclick="switchMode('unit')" id="tab-unit" class="tab-btn px-2.5 py-2 rounded-2xl font-bold text-sm bg-white text-slate-600 border-2 border-slate-200 hover:border-sky-300 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-shapes text-sky-500"></i> 填單位
+            </button>
+            <button onclick="switchMode('choice')" id="tab-choice" class="tab-btn px-2.5 py-2 rounded-2xl font-bold text-sm bg-white text-slate-600 border-2 border-slate-200 hover:border-amber-300 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-circle-question text-amber-500"></i> 選擇題
+            </button>
+            <button onclick="switchMode('reading')" id="tab-reading" class="tab-btn px-2.5 py-2 rounded-2xl font-bold text-sm bg-white text-slate-600 border-2 border-slate-200 hover:border-emerald-300 transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-glasses text-emerald-500"></i> 課文理解
+            </button>
+        </div>
+
+        <!-- Mode Toggle Indicator for Mistakes Mode -->
+        <div id="mistake-mode-banner" class="hidden mb-4 p-3 bg-rose-100 border-2 border-rose-300 text-rose-800 rounded-2xl flex items-center justify-between font-bold text-sm shadow-sm">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-rotate-left text-rose-600 text-lg"></i>
+                <span>目前正在【錯題區】複習模式中</span>
+            </div>
+            <button onclick="exitMistakeMode()" class="px-3 py-1 bg-white hover:bg-rose-50 text-rose-600 rounded-xl border border-rose-300 text-xs shadow-sm">
+                返回全題庫
+            </button>
+        </div>
+
+        <!-- Reading Passage Section -->
+        <div id="passage-container" class="hidden mb-6 bg-emerald-50/90 border-2 border-emerald-200 rounded-3xl p-5 shadow-sm">
+            <div class="flex items-center gap-2 text-emerald-700 font-bold text-lg mb-2">
+                <i class="fa-solid fa-book-open"></i> 閱讀測驗文章
+            </div>
+            <div class="bg-white p-4 rounded-2xl border border-emerald-100 text-slate-700 leading-relaxed text-base sm:text-lg shadow-inner">
+                <p class="font-semibold text-emerald-800 mb-1">【十二月五日 星期六 天氣：晴】</p>
+                <p>今天是運動會，我參加了班級賽跑，我使出了我全身力量努力跑，獲得了冠軍！頒獎時，老師送我禮物，今年的禮物是一盒彩色鉛筆，我好喜歡這個禮物，我會好好愛惜。</p>
+            </div>
+        </div>
+
+        <!-- Question Card Display Area -->
+        <div id="quiz-card" class="bg-white rounded-3xl p-6 sm:p-8 border-4 border-pink-200 shadow-xl relative overflow-hidden transition-all duration-300">
+            
+            <!-- Category Tag & Question Badge -->
+            <div class="flex justify-between items-center mb-4">
+                <span id="question-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-pink-100 text-pink-600 border border-pink-200">
+                    載入中...
+                </span>
+                <span id="question-index" class="text-xs font-bold text-slate-400">
+                    第 1 / 31 題 (每題 10 分)
+                </span>
+            </div>
+
+            <!-- Question Text -->
+            <div class="mb-6">
+                <h2 id="question-text" class="text-lg sm:text-2xl font-bold text-slate-800 leading-relaxed">
+                    題目載入中...
+                </h2>
+            </div>
+
+            <!-- Options Grid (Always 4 Options labeled 1, 2, 3, 4) -->
+            <div id="options-container" class="grid grid-cols-1 gap-3 sm:gap-4">
+                <!-- Dynamic options standard format: 1. 2. 3. 4. -->
+            </div>
+
+            <!-- Answer Feedback Overlay / Banner with 5s countdown when wrong -->
+            <div id="feedback-banner" class="hidden mt-6 p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all">
+                <div class="flex items-center gap-3">
+                    <div id="feedback-icon" class="text-3xl"></div>
+                    <div>
+                        <div id="feedback-title" class="font-bold text-lg"></div>
+                        <div id="feedback-detail" class="text-sm font-medium opacity-90"></div>
+                    </div>
+                </div>
+
+                <div class="w-full sm:w-auto flex justify-end">
+                    <!-- Retry Counter Button for Wrong Answers -->
+                    <button id="retry-timer-btn" disabled class="hidden bg-slate-300 text-slate-600 font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 cursor-not-allowed">
+                        <i class="fa-solid fa-hourglass-half animate-spin"></i>
+                        <span id="timer-text">5 秒後重新回答</span>
+                    </button>
+
+                    <!-- Next Question Button for Correct Answers -->
+                    <button id="next-btn" onclick="nextQuestion()" class="hidden btn-bounce bg-pink-500 hover:bg-pink-600 text-white font-bold px-5 py-2.5 rounded-xl shadow border-b-4 border-pink-700 flex items-center gap-2">
+                        下一題 <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Final Victory Screen -->
+        <div id="victory-screen" class="hidden text-center py-10 bg-white rounded-3xl border-4 border-amber-300 shadow-2xl p-6 sm:p-10 my-4">
+            <div class="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-amber-300 star-shine">
+                <i class="fa-solid fa-trophy text-5xl text-amber-500"></i>
+            </div>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-amber-600 mb-2">太棒了！測驗完成！</h2>
+            <p class="text-slate-600 text-lg mb-6">你展現了超級厲害的國語實力！</p>
+            
+            <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-6 rounded-2xl border-2 border-amber-200 max-w-sm mx-auto mb-6 shadow-inner">
+                <div class="text-sm text-amber-800 font-bold mb-1">最終總得分</div>
+                <div class="text-5xl font-black text-amber-600 my-1"><span id="final-score">0</span> <span class="text-2xl font-bold">分</span></div>
+                <div class="text-xs text-amber-700 mt-2" id="victory-eval">滿分 310 分！表現完美！</div>
+            </div>
+
+            <!-- Mistakes Summary Section on Victory -->
+            <div id="mistakes-summary" class="hidden mb-6 bg-rose-50 border border-rose-200 p-4 rounded-2xl max-w-sm mx-auto text-left">
+                <div class="font-bold text-rose-700 text-sm mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-exclamation"></i> 尚有需要複習的錯題：
+                </div>
+                <p class="text-xs text-rose-600">你共有 <span id="summary-mistake-count" class="font-bold">0</span> 題曾答錯，建議進入錯題區再次挑戰加強印象！</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="btn-review-mistakes" onclick="startMistakeReview()" class="hidden btn-bounce bg-rose-500 hover:bg-rose-600 text-white font-bold text-base px-6 py-3 rounded-2xl shadow-lg border-b-4 border-rose-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-left"></i> 進入錯題區複習
+                </button>
+                <button onclick="restartQuiz()" class="btn-bounce bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-black text-base px-8 py-3 rounded-2xl shadow-lg border-b-4 border-amber-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> 重新全選挑戰！
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400 border-t border-slate-200 bg-white/50">
+        115學年度第一學期期中定期評量 國語領域 · 翰林版 第一課~第六課
+    </footer>
+
+    <!-- Quiz Logic & Sound Script -->
+    <script>
+        // 31 Questions dataset (10 pts each = 310 pts)
+        // All multiple choices mapped to exactly 4 options labeled 1, 2, 3, 4
+        const quizData = [
+            // ==================== 三、填填看 - 成語 (6題) ====================
+            {
+                id: 1,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '形容人害怕，不知道怎麼辦。',
+                options: ['1 不知不覺', '2 不知所措', '3 易如反掌', '4 聚沙成塔'],
+                answer: 1,
+                explanation: '【不知所措】形容慌亂害怕，不知道該怎麼辦才好。'
+            },
+            {
+                id: 2,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '沒有察覺到。',
+                options: ['1 不知不覺', '2 不知所措', '3 易如反掌', '4 聚沙成塔'],
+                answer: 0,
+                explanation: '【不知不覺】未曾察覺、沒有注意到。'
+            },
+            {
+                id: 3,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '比喻積少成多。',
+                options: ['1 不知不覺', '2 不知所措', '3 易如反掌', '4 聚沙成塔'],
+                answer: 3,
+                explanation: '【聚沙成塔】比喻積少成多。'
+            },
+            {
+                id: 4,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '形容非常簡單。',
+                options: ['1 不知不覺', '2 不知所措', '3 易如反掌', '4 聚沙成塔'],
+                answer: 2,
+                explanation: '【易如反掌】比喻事情非常容易做到。'
+            },
+            {
+                id: 5,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '哭鬧的妹妹在媽媽安撫下，（ ）睡著了。',
+                options: ['1 不知不覺', '2 聚沙成塔', '3 易如反掌', '4 眉開眼笑'],
+                answer: 0,
+                explanation: '【不知不覺】妹妹漸漸地、不知不覺就睡著了。'
+            },
+            {
+                id: 6,
+                category: 'idiom',
+                badge: '三、填成語',
+                question: '上課找到課本，弟弟感到（ ）。',
+                options: ['1 不知所措', '2 眉開眼笑', '3 聚沙成塔', '4 易如反掌'],
+                answer: 1,
+                explanation: '【眉開眼笑】形容十分歡喜高興的樣子。'
+            },
+
+            // ==================== 三、填填看 - 單位量詞 (6題) ====================
+            {
+                id: 7,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的林子。」',
+                options: ['1 一片片', '2 一顆顆', '3 一隻隻', '4 一架架'],
+                answer: 0,
+                explanation: '廣大的樹林通常用「一片片」形容。'
+            },
+            {
+                id: 8,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的豆子。」',
+                options: ['1 一首首', '2 一顆顆', '3 一件件', '4 一部部'],
+                answer: 1,
+                explanation: '圓形粒狀的豆子用「一顆顆」。'
+            },
+            {
+                id: 9,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的蜻蜓。」',
+                options: ['1 一架架', '2 一片片', '3 一隻隻', '4 一首首'],
+                answer: 2,
+                explanation: '昆蟲與動物用「一隻隻」。'
+            },
+            {
+                id: 10,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的兒歌。」',
+                options: ['1 一首首', '2 一件件', '3 一顆顆', '4 一部部'],
+                answer: 0,
+                explanation: '歌曲兒歌用「一首首」。'
+            },
+            {
+                id: 11,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的飛機。」',
+                options: ['1 一隻隻', '2 一架架', '3 一片片', '4 一首首'],
+                answer: 1,
+                explanation: '飛機等機械設備用「一架架」。'
+            },
+            {
+                id: 12,
+                category: 'unit',
+                badge: '三、填單位量詞',
+                question: '下面物品要用什麼單位量詞呢？「（ ）的電影。」',
+                options: ['1 一首首', '2 一顆顆', '3 一件件', '4 一部部'],
+                answer: 3,
+                explanation: '電影或車輛用「一部部」。'
+            },
+
+            // ==================== 四、選擇題 (10題) ====================
+            {
+                id: 13,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '「上臺好緊張」中「緊張」的相似詞是什麼？',
+                options: ['1 慌張', '2 跳舞', '3 開心', '4 熱鬧'],
+                answer: 0,
+                explanation: '「緊張」與「慌張」意思相近。'
+            },
+            {
+                id: 14,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '下面哪一個「」中的讀音與「躲避」的「躲（ㄉㄨㄛˇ）」相同？',
+                options: ['1 「多」少', '2 發「抖」', '3 花「朵」', '4 「都」有'],
+                answer: 2,
+                explanation: '花「朵」讀音為「ㄉㄨㄛˇ」，與「躲」相同。'
+            },
+            {
+                id: 15,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '哪個句子中，<span class="highlight-neg">不可以</span>使用「領」？',
+                options: [
+                    '1 哥哥跑得很快，「領」先了所有人',
+                    '2 媽媽到銀行「領」錢',
+                    '3 幫助別人可以「領」自己感到開心',
+                    '4 這件衣服的衣「領」已經髒了'
+                ],
+                answer: 2,
+                explanation: '選項3應該使用「使」或「讓」自己感到開心，不能用「領」。'
+            },
+            {
+                id: 16,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '下面語詞中，哪一個「得（ㄉㄜ˙）」要讀<span class="font-bold underline text-pink-600">輕聲「ㄉㄜ˙」</span>？',
+                options: ['1 「得」意（ㄉㄜˊ）', '2 「得」到（ㄉㄜˊ）', '3 覺「得」（ㄉㄜ˙）', '4 「得」獎（ㄉㄜˊ）'],
+                answer: 2,
+                explanation: '覺「得」中的「得」讀輕聲「ㄉㄜ˙」。'
+            },
+            {
+                id: 17,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '「說不定我會先出門」句子中「說不定」的相似詞是？',
+                options: ['1 也許', '2 不能', '3 如果', '4 一定'],
+                answer: 0,
+                explanation: '「說不定」表示推測可能性，相似詞為「也許」。'
+            },
+            {
+                id: 18,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '「我們已經約定好的事情，你□□能反悔？」□中應該填入哪一個語詞？',
+                options: ['1 什麼', '2 這麼', '3 怎麼', '4 那麼'],
+                answer: 2,
+                explanation: '反問語氣填入「怎麼」能反悔？最合適。'
+            },
+            {
+                id: 19,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '「□□我第一次拿毛筆寫字，所以寫得有點怪怪的。」□中應該填入哪一個語詞？',
+                options: ['1 但是', '2 可以', '3 因為', '4 只要'],
+                answer: 2,
+                explanation: '搭配後文「所以」，句型為「因為...所以...」。'
+            },
+            {
+                id: 20,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '「旁」的意思是什麼？',
+                options: ['1 側面、側邊', '2 中心', '3 互相對齊', '4 沒有按照順序的'],
+                answer: 0,
+                explanation: '「旁」代表側面、側邊或旁邊。'
+            },
+            {
+                id: 21,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '不明亮的、光線不充足的。與「明」相對，叫做？',
+                options: ['1 光', '2 閃', '3 暗', '4 亮'],
+                answer: 2,
+                explanation: '與「明」相對的反義詞為「暗」。'
+            },
+            {
+                id: 22,
+                category: 'choice',
+                badge: '四、選擇題',
+                question: '明白、了解，叫做？',
+                options: ['1 知道', '2 步道', '3 道路', '4 知了'],
+                answer: 0,
+                explanation: '明白了解事情稱為「知道」。'
+            },
+
+            // ==================== 五、課文理解 + 八、閱讀測驗 (9題) ====================
+            {
+                id: 23,
+                category: 'reading',
+                badge: '五、課文理解',
+                question: '在《草叢裡的星星》這一課中，這些在草叢中的小星星（螢火蟲）具備一些特徵，但是<span class="highlight-neg">不包含</span>下面哪一項？',
+                options: ['1 會飛', '2 會發出亮光', '3 喜歡有水的地方', '4 喜歡游泳'],
+                answer: 3,
+                explanation: '螢火蟲會飛、會發光且喜歡濕潤環境，但不包含「喜歡游泳」。'
+            },
+            {
+                id: 24,
+                category: 'reading',
+                badge: '五、課文理解',
+                question: '在《沙灘上的畫》這一課中，沙灘上的腳印為什麼有大有小？',
+                options: [
+                    '1 因為小真拿著大人跟小孩的鞋子在沙灘上印出來的',
+                    '2 因為腳印有些被海水沖掉了，有些沒有',
+                    '3 因為有大人跟小孩光著腳一起走過沙灘',
+                    '4 藝術家故意留下拼貼的作品'
+                ],
+                answer: 2,
+                explanation: '課文中是因為大人跟小孩一起赤腳走過沙灘留下的腳印。'
+            },
+            {
+                id: 25,
+                category: 'reading',
+                badge: '五、課文理解',
+                question: '《草叢裡的星星》是一篇日記，下面哪一項<span class="highlight-neg">不是</span>書寫日記的重點？',
+                options: ['1 要記錄日期', '2 要記錄天氣狀況', '3 要記錄那天特別的事情', '4 要寫下祝福語跟簽名'],
+                answer: 3,
+                explanation: '寫祝福語和簽名是「寫信或卡片」的格式，非日記重點。'
+            },
+            {
+                id: 26,
+                category: 'reading',
+                badge: '五、課文理解',
+                question: '在《沙灘上的畫》這一課中，小真一家有幾個人？',
+                options: ['1 三個', '2 四個', '3 五個', '4 六個'],
+                answer: 1,
+                explanation: '《沙灘上的畫》課文描述小真一家共有「四個人」。'
+            },
+            {
+                id: 27,
+                category: 'reading',
+                badge: '五、課文理解',
+                question: '在《彩色的天空》這一課中，主角為什麼會感到緊張？',
+                options: [
+                    '1 忘了帶作業簿',
+                    '2 心中有問題，但不知道可以問誰',
+                    '3 考卷上的題目都不會寫',
+                    '4 陌生人向他問路'
+                ],
+                answer: 1,
+                explanation: '主角因心中有疑問卻不知道可以請教誰而感到緊張不安。'
+            },
+            {
+                id: 28,
+                category: 'reading',
+                badge: '八、閱讀測驗',
+                question: '這是一篇什麼內容的文章呢？',
+                options: ['1 童詩', '2 卡片', '3 便條', '4 日記'],
+                answer: 3,
+                explanation: '文章頂端有「十二月五日 星期六 天氣：晴」，格式為日記。'
+            },
+            {
+                id: 29,
+                category: 'reading',
+                badge: '八、閱讀測驗',
+                question: '十二月五日的那一天，天氣情況怎麼樣？',
+                options: ['1 下雨', '2 陰天', '3 出太陽', '4 寒冷'],
+                answer: 2,
+                explanation: '日記標明「天氣：晴」，代表是出太陽的晴天。'
+            },
+            {
+                id: 30,
+                category: 'reading',
+                badge: '八、閱讀測驗',
+                question: '下面哪一個選項<span class="highlight-neg">錯誤</span>？',
+                options: [
+                    '1 運動會是星期六',
+                    '2 主角的禮物是一盒彩色鉛筆',
+                    '3 禮物是爸爸買的',
+                    '4 主角參加班級賽跑'
+                ],
+                answer: 2,
+                explanation: '文中說明禮物是頒獎時「老師送的」，並非爸爸買的。'
+            },
+            {
+                id: 31,
+                category: 'reading',
+                badge: '八、閱讀測驗',
+                question: '為什麼主角把「班級賽跑」跟「彩色鉛筆」這兩件事情寫進去？',
+                options: [
+                    '1 他覺得這是今天最特別的事',
+                    '2 他不知道該寫什麼',
+                    '3 他覺得這兩件事讓他很生氣',
+                    '4 老師說要寫下這兩件事'
+                ],
+                answer: 0,
+                explanation: '日記主要記錄當天發生最深刻、最特別的事情。'
+            }
+        ];
+
+        // Global State
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentMode = 'all'; // 'all', 'idiom', 'unit', 'choice', 'reading', 'mistakes'
+        let currentQueue = [...quizData];
+        let answeredCorrectlySet = new Set();
+        let mistakeSet = new Set(); // Stores question IDs that were answered incorrectly
+        let retryTimer = null;
+
+        // Sound Synth
+        let synth;
+        function initSound() {
+            if (!synth && window.Tone) {
+                Tone.start();
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -6;
+            }
+        }
+
+        function playCorrectSound() {
+            try {
+                initSound();
+                if (synth) {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "8n", now);
+                }
+            } catch (e) {}
+        }
+
+        function playWrongSound() {
+            try {
+                initSound();
+                if (synth) {
+                    const now = Tone.now();
+                    synth.triggerAttackRelease(["A3", "F3"], "8n", now);
+                }
+            } catch (e) {}
+        }
+
+        // Web Speech Synth for "好棒喔！" encouraging TTS
+        function speakEncouragement() {
+            if ('speechSynthesis' in window) {
+                const phrases = ["好棒喔！", "太厲害了！", "答對了，真棒！", "超級優秀！"];
+                const text = phrases[Math.floor(Math.random() * phrases.length)];
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.1;
+                utterance.pitch = 1.2;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Confetti Burst FX
+        function triggerConfetti() {
+            confetti({
+                particleCount: 50,
+                spread: 70,
+                origin: { y: 0.7 }
+            });
+        }
+
+        window.onload = function() {
+            switchMode('all');
+        };
+
+        // Switch Mode or Category
+        function switchMode(mode) {
+            initSound();
+            currentMode = mode;
+            currentQuestionIndex = 0;
+
+            const banner = document.getElementById('mistake-mode-banner');
+            if (mode === 'mistakes') {
+                banner.classList.remove('hidden');
+                currentQueue = quizData.filter(q => mistakeSet.has(q.id));
+            } else {
+                banner.classList.add('hidden');
+                if (mode === 'all') {
+                    currentQueue = [...quizData];
+                } else {
+                    currentQueue = quizData.filter(q => q.category === mode);
+                }
+            }
+
+            updateTabsUI();
+            renderQuestion();
+        }
+
+        function exitMistakeMode() {
+            switchMode('all');
+        }
+
+        function updateTabsUI() {
+            const tabs = ['all', 'idiom', 'unit', 'choice', 'reading'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (currentMode === t) {
+                    btn.classList.add('bg-pink-500', 'text-white', 'shadow-md', 'border-pink-600');
+                    btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+                } else {
+                    btn.classList.remove('bg-pink-500', 'text-white', 'shadow-md', 'border-pink-600');
+                    btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+                }
+            });
+
+            // Toggle reading passage
+            const passageBox = document.getElementById('passage-container');
+            if (currentMode === 'reading') {
+                passageBox.classList.remove('hidden');
+            } else {
+                passageBox.classList.add('hidden');
+            }
+        }
+
+        // Render Current Question
+        function renderQuestion() {
+            if (retryTimer) clearInterval(retryTimer);
+
+            const quizCard = document.getElementById('quiz-card');
+            const victoryScreen = document.getElementById('victory-screen');
+            const feedbackBanner = document.getElementById('feedback-banner');
+
+            feedbackBanner.classList.add('hidden');
+
+            if (currentQueue.length === 0 || currentQuestionIndex >= currentQueue.length) {
+                if (currentMode === 'all' || answeredCorrectlySet.size === quizData.length) {
+                    showVictoryScreen();
+                } else {
+                    quizCard.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="text-5xl mb-3">🎉</div>
+                            <h3 class="text-xl font-bold text-slate-700 mb-2">此類別題目已完成！</h3>
+                            <p class="text-slate-500 mb-6">請點選其他標籤或返回全部題目。</p>
+                            <button onclick="switchMode('all')" class="bg-pink-500 hover:bg-pink-600 text-white font-bold px-6 py-2.5 rounded-xl shadow btn-bounce">
+                                查看所有題目
+                            </button>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            victoryScreen.classList.add('hidden');
+            quizCard.classList.remove('hidden');
+
+            const q = currentQueue[currentQuestionIndex];
+
+            // Show passage if reading category question
+            const passageBox = document.getElementById('passage-container');
+            if (q.category === 'reading' && q.badge.includes('閱讀測驗')) {
+                passageBox.classList.remove('hidden');
+            } else if (currentMode !== 'reading') {
+                passageBox.classList.add('hidden');
+            }
+
+            document.getElementById('question-badge').innerText = q.badge;
+            document.getElementById('question-index').innerText = `第 ${quizData.indexOf(q) + 1} / ${quizData.length} 題 (10分)`;
+            document.getElementById('question-text').innerHTML = q.question;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Options 1, 2, 3, 4 format
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-2xl border-2 border-slate-200 hover:border-pink-300 bg-white hover:bg-pink-50 font-bold text-base sm:text-lg text-slate-700 shadow-sm transition-all btn-bounce flex items-center justify-between";
+                btn.innerHTML = `
+                    <span>${optText}</span>
+                    <i class="fa-regular fa-circle text-slate-300 text-xl opt-icon"></i>
+                `;
+                btn.onclick = () => checkAnswer(idx, q, btn);
+                optionsContainer.appendChild(btn);
+            });
+
+            updateProgress();
+        }
+
+        // Check Answer & Handle 5s Wrong Answer Retry Lock
+        function checkAnswer(selectedIndex, q, btnElement) {
+            initSound();
+
+            const feedbackBanner = document.getElementById('feedback-banner');
+            const feedbackIcon = document.getElementById('feedback-icon');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackDetail = document.getElementById('feedback-detail');
+            const retryTimerBtn = document.getElementById('retry-timer-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            const allButtons = document.getElementById('options-container').querySelectorAll('button');
+            allButtons.forEach(b => b.disabled = true);
+
+            if (selectedIndex === q.answer) {
+                // Correct
+                if (!answeredCorrectlySet.has(q.id)) {
+                    score += 10;
+                    answeredCorrectlySet.add(q.id);
+                }
+                mistakeSet.delete(q.id); // Remove from mistakes if corrected
+
+                playCorrectSound();
+
+                // Random sound/speech vs confetti light effect
+                if (Math.random() > 0.5) {
+                    speakEncouragement();
+                } else {
+                    triggerConfetti();
+                }
+
+                btnElement.className = "w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-100 text-emerald-900 font-bold text-base sm:text-lg flex items-center justify-between shadow-md";
+                btnElement.querySelector('.opt-icon').className = "fa-solid fa-circle-check text-emerald-600 text-2xl";
+
+                feedbackBanner.className = "mt-6 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
+                feedbackIcon.innerHTML = `<i class="fa-solid fa-face-smile-wink text-emerald-500 text-3xl"></i>`;
+                feedbackTitle.innerText = "答對了！太優秀了！";
+                feedbackDetail.innerText = q.explanation;
+
+                retryTimerBtn.classList.add('hidden');
+                nextBtn.classList.remove('hidden');
+
+            } else {
+                // Incorrect - Add to mistake set
+                mistakeSet.add(q.id);
+                playWrongSound();
+
+                btnElement.className = "w-full text-left p-4 rounded-2xl border-2 border-rose-400 bg-rose-100 text-rose-800 font-bold text-base sm:text-lg flex items-center justify-between shadow-md";
+                btnElement.querySelector('.opt-icon').className = "fa-solid fa-circle-xmark text-rose-500 text-2xl";
+
+                // Highlight correct option
+                const correctBtn = allButtons[q.answer];
+                if (correctBtn) {
+                    correctBtn.className = "w-full text-left p-4 rounded-2xl border-2 border-emerald-400 bg-emerald-50 text-emerald-800 font-bold text-base sm:text-lg flex items-center justify-between";
+                    correctBtn.querySelector('.opt-icon').className = "fa-solid fa-circle-check text-emerald-500 text-xl";
+                }
+
+                feedbackBanner.className = "mt-6 p-4 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4";
+                feedbackIcon.innerHTML = `<i class="fa-solid fa-face-sad-tear text-rose-400 text-3xl"></i>`;
+                feedbackTitle.innerText = "答錯囉！已被記錄至錯題區！";
+                feedbackDetail.innerText = q.explanation;
+
+                nextBtn.classList.add('hidden');
+                retryTimerBtn.classList.remove('hidden');
+
+                // Start 5 Seconds Countdown for wrong answer retry
+                let timeLeft = 5;
+                document.getElementById('timer-text').innerText = `${timeLeft} 秒後重新回答`;
+
+                retryTimer = setInterval(() => {
+                    timeLeft--;
+                    if (timeLeft > 0) {
+                        document.getElementById('timer-text').innerText = `${timeLeft} 秒後重新回答`;
+                    } else {
+                        clearInterval(retryTimer);
+                        // Re-enable option buttons for retrying current question
+                        renderQuestion();
+                    }
+                }, 1000);
+            }
+
+            // Update Header Counters
+            document.getElementById('score-display').innerText = score;
+            document.getElementById('mistake-count').innerText = mistakeSet.size;
+            
+            if (mistakeSet.size > 0) {
+                document.getElementById('mistake-badge').classList.remove('hidden');
+            }
+
+            feedbackBanner.classList.remove('hidden');
+            updateProgress();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex >= currentQueue.length) {
+                if (currentMode === 'all' || answeredCorrectlySet.size === quizData.length) {
+                    showVictoryScreen();
+                } else {
+                    renderQuestion();
+                }
+            } else {
+                renderQuestion();
+            }
+        }
+
+        function updateProgress() {
+            const count = answeredCorrectlySet.size;
+            const total = quizData.length;
+            const percentage = (count / total) * 100;
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+            document.getElementById('progress-text').innerText = `${count}/${total} 題`;
+        }
+
+        function showVictoryScreen() {
+            document.getElementById('quiz-card').classList.add('hidden');
+            document.getElementById('passage-container').classList.add('hidden');
+            
+            const victoryScreen = document.getElementById('victory-screen');
+            victoryScreen.classList.remove('hidden');
+
+            document.getElementById('final-score').innerText = score;
+            
+            const evalText = document.getElementById('victory-eval');
+            if (score === 310) {
+                evalText.innerText = "滿分 310 分！你是國語小達人！表現完美！";
+            } else if (score >= 250) {
+                evalText.innerText = "拿到高分！實力非常堅強喔！";
+            } else {
+                evalText.innerText = "非常努力！建議複習錯題區拿滿分喔！";
+            }
+
+            const btnMistakes = document.getElementById('btn-review-mistakes');
+            const summaryMistakes = document.getElementById('mistakes-summary');
+            if (mistakeSet.size > 0) {
+                btnMistakes.classList.remove('hidden');
+                summaryMistakes.classList.remove('hidden');
+                document.getElementById('summary-mistake-count').innerText = mistakeSet.size;
+            } else {
+                btnMistakes.classList.add('hidden');
+                summaryMistakes.classList.add('hidden');
+            }
+
+            // Victory Fireworks
+            triggerConfetti();
+        }
+
+        function startMistakeReview() {
+            if (mistakeSet.size > 0) {
+                switchMode('mistakes');
+            }
+        }
+
+        function restartQuiz() {
+            score = 0;
+            currentQuestionIndex = 0;
+            answeredCorrectlySet.clear();
+            mistakeSet.clear();
+
+            document.getElementById('score-display').innerText = '0';
+            document.getElementById('mistake-count').innerText = '0';
+            document.getElementById('mistake-badge').classList.add('hidden');
+
+            switchMode('all');
+        }
+    </script>
+</body>
+</html>
